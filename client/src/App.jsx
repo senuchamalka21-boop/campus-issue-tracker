@@ -132,100 +132,139 @@ function App() {
     }
   };
 
-  // --- DASHBOARD VIEW (If logged in) ---
+  // --- DASHBOARD VIEW ---
   if (user) {
     return (
-      <div style={{ maxWidth: '600px', margin: '50px auto', fontFamily: 'sans-serif' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #ccc', paddingBottom: '10px' }}>
-          <h2>Welcome, {user.name} {user.role === 'admin' && '(Admin)'}</h2>
-          <button onClick={handleLogout} style={{ padding: '5px 10px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-            Logout
-          </button>
-        </div>
-        
-        {user.role === 'student' && (
-          <div style={{ marginTop: '30px', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
-            <h3>Report a Campus Issue</h3>
-            
-            <form onSubmit={handleIssueSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-              <input name="title" placeholder="Issue Title" value={issueData.title} onChange={(e) => setIssueData({...issueData, title: e.target.value})} required style={{ padding: '8px' }} />
-              
-              <select name="category" value={issueData.category} onChange={(e) => setIssueData({...issueData, category: e.target.value})} style={{ padding: '8px' }}>
-                <option value="Electrical">Electrical</option>
-                <option value="Plumbing">Plumbing</option>
-                <option value="Wi-Fi">Wi-Fi</option>
-                <option value="Cleanliness">Cleanliness</option>
-                <option value="Other">Other</option>
-              </select>
-
-              <input name="location" placeholder="Location (e.g., Hostel Room 12)" value={issueData.location} onChange={(e) => setIssueData({...issueData, location: e.target.value})} required style={{ padding: '8px' }} />
-              
-              <textarea name="description" placeholder="Describe the issue..." value={issueData.description} onChange={(e) => setIssueData({...issueData, description: e.target.value})} required style={{ padding: '8px', minHeight: '80px' }} />
-              
-              <button type="submit" style={{ padding: '10px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                Submit Issue
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+        <nav className="bg-white shadow-sm border-b border-slate-200">
+          <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 className="text-xl font-bold text-blue-600 flex items-center gap-2">
+              <span>🏫</span> Campus Issue Tracker
+            </h1>
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-slate-600">
+                {user.name} {user.role === 'admin' && <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full ml-1">Admin</span>}
+              </span>
+              <button onClick={handleLogout} className="text-sm text-red-600 hover:text-red-700 font-medium">
+                Logout
               </button>
-            </form>
-            
-            <p style={{ color: issueMsg.startsWith('✅') ? 'green' : 'red', marginTop: '15px' }}>{issueMsg}</p>
+            </div>
           </div>
-        )}
+        </nav>
 
-        <div style={{ marginTop: '40px' }}>
-          <h3>{user.role === 'admin' ? 'All Campus Issues' : 'Your Reported Issues'}</h3>
-          {issues.length === 0 ? (
-            <p>No issues reported yet.</p>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              {issues.map(issue => (
-                <li key={issue.id} style={{ backgroundColor: 'white', padding: '15px', marginBottom: '10px', borderRadius: '5px', borderLeft: `5px solid ${issue.status === 'resolved' ? '#10b981' : issue.status === 'in_progress' ? '#f59e0b' : '#2563eb'}`, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                  <h4 style={{ margin: '0 0 5px 0' }}>{issue.title} {issue.student_name && <span style={{fontSize: '12px', color: 'gray'}}> (by {issue.student_name})</span>}</h4>
-                  <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#555' }}>
-                    <strong>Location:</strong> {issue.location} | <strong>Category:</strong> {issue.category}
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                    <p style={{ margin: '0', fontSize: '12px', color: '#888' }}>
-                      Status: <strong style={{ color: issue.status === 'resolved' ? '#10b981' : issue.status === 'in_progress' ? '#f59e0b' : '#2563eb', textTransform: 'capitalize' }}>{issue.status.replace('_', ' ')}</strong>
-                    </p>
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          {/* STUDENT FORM */}
+          {user.role === 'student' && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
+              <h2 className="text-lg font-bold mb-4">Report a New Issue</h2>
+              <form onSubmit={handleIssueSubmit} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input name="title" placeholder="Issue Title" value={issueData.title} onChange={(e) => setIssueData({...issueData, title: e.target.value})} required className="border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                  <input name="location" placeholder="Location (e.g., Hostel Room 12)" value={issueData.location} onChange={(e) => setIssueData({...issueData, location: e.target.value})} required className="border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                </div>
+                <select name="category" value={issueData.category} onChange={(e) => setIssueData({...issueData, category: e.target.value})} className="border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="Electrical">Electrical</option>
+                  <option value="Plumbing">Plumbing</option>
+                  <option value="Wi-Fi">Wi-Fi</option>
+                  <option value="Cleanliness">Cleanliness</option>
+                  <option value="Other">Other</option>
+                </select>
+                <textarea name="description" placeholder="Describe the issue in detail..." value={issueData.description} onChange={(e) => setIssueData({...issueData, description: e.target.value})} required className="border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[100px]" />
+                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors">
+                  Submit Issue
+                </button>
+              </form>
+              {issueMsg && <p className={`mt-3 text-sm font-medium ${issueMsg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>{issueMsg}</p>}
+            </div>
+          )}
+
+          {/* ISSUES LIST */}
+          <div>
+            <h2 className="text-lg font-bold mb-4">{user.role === 'admin' ? 'All Campus Issues' : 'Your Reported Issues'}</h2>
+            {issues.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl border border-slate-200 border-dashed">
+                <p className="text-slate-500">No issues found. Everything is working perfectly!</p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {issues.map(issue => (
+                  <div key={issue.id} className={`bg-white p-5 rounded-xl shadow-sm border-l-4 border border-slate-200 ${issue.status === 'resolved' ? 'border-l-green-500' : issue.status === 'in_progress' ? 'border-l-amber-500' : 'border-l-blue-500'}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="font-bold text-lg">{issue.title}</h3>
+                        <p className="text-sm text-slate-500">
+                          {issue.student_name && <span className="mr-2 text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">By {issue.student_name}</span>}
+                          <span className="mr-2 font-medium">📍 {issue.location}</span>
+                          <span className="font-medium">🏷️ {issue.category}</span>
+                        </p>
+                      </div>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide
+                        ${issue.status === 'resolved' ? 'bg-green-100 text-green-700' : issue.status === 'in_progress' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {issue.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-sm mb-4 mt-2">{issue.description}</p>
+                    
                     {user.role === 'admin' && (
-                      <button onClick={() => handleResolve(issue.id, issue.status)} style={{ padding: '5px 10px', fontSize: '12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                        Change Status
-                      </button>
+                      <div className="flex justify-end border-t border-slate-100 pt-3 mt-3">
+                        <button onClick={() => handleResolve(issue.id, issue.status)} className="bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium py-1.5 px-4 rounded-lg transition-colors">
+                          Mark as {issue.status === 'open' ? 'In Progress' : issue.status === 'in_progress' ? 'Resolved' : 'Open'}
+                        </button>
+                      </div>
                     )}
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
       </div>
     );
   }
 
   // --- LOGIN/REGISTER VIEW ---
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', fontFamily: 'sans-serif' }}>
-      <h2>{isLogin ? 'Login' : 'Register'}</h2>
-      
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {!isLogin && (
-          <input name="name" placeholder="Name" onChange={handleChange} required style={{ padding: '8px' }} />
-        )}
-        <input name="email" type="email" placeholder="Email" onChange={handleChange} required style={{ padding: '8px' }} />
-        <input name="password" type="password" placeholder="Password" onChange={handleChange} required style={{ padding: '8px' }} />
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center font-sans px-4">
+      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-blue-600 mb-2">🏫</h1>
+          <h2 className="text-2xl font-bold text-slate-800">{isLogin ? 'Welcome Back' : 'Create an Account'}</h2>
+          <p className="text-slate-500 text-sm mt-1">Campus Issue Tracker</p>
+        </div>
         
-        <button type="submit" style={{ padding: '10px', backgroundColor: '#2563eb', color: 'white', border: 'none', cursor: 'pointer' }}>
-          {isLogin ? 'Login' : 'Register'}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {!isLogin && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+              <input name="name" placeholder="John Doe" onChange={handleChange} required className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+            <input name="email" type="email" placeholder="student@campus.edu" onChange={handleChange} required className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <input name="password" type="password" placeholder="••••••••" onChange={handleChange} required className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          </div>
+          
+          <button type="submit" className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors w-full">
+            {isLogin ? 'Sign In' : 'Register'}
+          </button>
+        </form>
 
-      <p style={{ color: message.startsWith('✅') ? 'green' : 'red', marginTop: '15px' }}>
-        {message}
-      </p>
+        {message && (
+          <p className={`mt-4 text-center text-sm font-medium ${message.startsWith('✅') ? 'text-green-600' : message.startsWith('❌') ? 'text-red-600' : 'text-slate-500'}`}>
+            {message}
+          </p>
+        )}
 
-      <button onClick={() => { setIsLogin(!isLogin); setMessage(''); }} style={{ background: 'none', border: 'none', color: 'blue', cursor: 'pointer' }}>
-        {isLogin ? 'Need an account? Register' : 'Already have an account? Login'}
-      </button>
+        <div className="mt-6 text-center">
+          <button onClick={() => { setIsLogin(!isLogin); setMessage(''); }} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+            {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
