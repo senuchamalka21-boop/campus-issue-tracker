@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const API_URL = 'https://campus-issue-tracker-server.vercel.app';
+
 function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
@@ -22,7 +24,7 @@ function App() {
   const fetchIssues = async () => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch('http://localhost:5000/api/issues', {
+      const res = await fetch(`${API_URL}/api/issues`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -40,7 +42,7 @@ function App() {
     e.preventDefault();
     setMessage('Loading...');
 
-    const url = isLogin ? 'http://localhost:5000/api/login' : 'http://localhost:5000/api/register';
+    const url = isLogin ? `${API_URL}/api/login` : `${API_URL}/api/register`;
     
     try {
       const res = await fetch(url, {
@@ -87,7 +89,7 @@ function App() {
     
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch('http://localhost:5000/api/issues', {
+      const res = await fetch(`${API_URL}/api/issues`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -109,13 +111,12 @@ function App() {
     }
   };
 
-  // NEW: Admin resolve function
   const handleResolve = async (id, currentStatus) => {
     const newStatus = currentStatus === 'open' ? 'in_progress' : currentStatus === 'in_progress' ? 'resolved' : 'open';
     
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:5000/api/issues/${id}/status`, {
+      const res = await fetch(`${API_URL}/api/issues/${id}/status`, {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
@@ -124,7 +125,7 @@ function App() {
         body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
-        fetchIssues(); // Refresh the list
+        fetchIssues();
       }
     } catch (err) {
       console.error(err);
@@ -142,7 +143,6 @@ function App() {
           </button>
         </div>
         
-        {/* Only show the form to students */}
         {user.role === 'student' && (
           <div style={{ marginTop: '30px', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
             <h3>Report a Campus Issue</h3>
@@ -171,7 +171,6 @@ function App() {
           </div>
         )}
 
-        {/* Display Issues List */}
         <div style={{ marginTop: '40px' }}>
           <h3>{user.role === 'admin' ? 'All Campus Issues' : 'Your Reported Issues'}</h3>
           {issues.length === 0 ? (
