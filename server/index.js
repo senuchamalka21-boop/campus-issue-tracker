@@ -95,12 +95,12 @@ app.post('/api/login', async (req, res) => {
 // --- CREATE ISSUE (Protected Route) ---
 app.post('/api/issues', verifyToken, async (req, res) => {
   try {
-    const { title, description, category, location } = req.body;
+    const { title, description, category, location, image_url } = req.body;
     const student_id = req.user.id;
 
     const newIssue = await pool.query(
-      'INSERT INTO issues (student_id, title, description, category, location) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [student_id, title, description, category, location]
+      'INSERT INTO issues (student_id, title, description, category, location, image_url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [student_id, title, description, category, location, image_url]
     );
 
     res.status(201).json({ message: 'Issue reported successfully', issue: newIssue.rows[0] });
@@ -114,7 +114,6 @@ app.get('/api/issues', verifyToken, async (req, res) => {
   try {
     let result;
     if (req.user.role === 'admin') {
-      // Admin gets ALL issues, joined with user names
       result = await pool.query(`
         SELECT issues.*, users.name as student_name 
         FROM issues 
@@ -122,7 +121,6 @@ app.get('/api/issues', verifyToken, async (req, res) => {
         ORDER BY issues.created_at DESC
       `);
     } else {
-      // Student gets only THEIR issues
       result = await pool.query(
         'SELECT * FROM issues WHERE student_id = $1 ORDER BY created_at DESC',
         [req.user.id]
@@ -133,7 +131,6 @@ app.get('/api/issues', verifyToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // --- UPDATE ISSUE STATUS (Admin Only) ---
 app.patch('/api/issues/:id/status', verifyToken, async (req, res) => {

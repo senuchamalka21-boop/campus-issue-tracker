@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 
 const API_URL = 'https://campus-issue-tracker-server.vercel.app';
+const CLOUDINARY_CLOUD_NAME = 'dl8ro18e';
+const CLOUDINARY_UPLOAD_PRESET = 'campus_issues';
 
 function App() {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,6 +12,8 @@ function App() {
 
   // Issue states
   const [issueData, setIssueData] = useState({ title: '', description: '', category: 'Electrical', location: '' });
+  const [imageFile, setImageFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [issueMsg, setIssueMsg] = useState('');
   const [issues, setIssues] = useState([]);
 
@@ -86,28 +90,58 @@ function App() {
   const handleIssueSubmit = async (e) => {
     e.preventDefault();
     setIssueMsg('Submitting...');
+    setIsUploading(true);
     
-    const token = localStorage.getItem('token');
+    let imageUrl = null;
+
     try {
+      // 1. Upload image to Cloudinary if one was selected
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+        const cloudinaryRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        const cloudinaryData = await cloudinaryRes.json();
+        
+        if (cloudinaryData.secure_url) {
+          imageUrl = cloudinaryData.secure_url;
+        } else {
+          throw new Error("Image upload failed");
+        }
+      }
+
+      // 2. Send issue data (including image URL) to our backend
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/api/issues`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(issueData)
+        body: JSON.stringify({ ...issueData, image_url: imageUrl })
       });
+      
       const data = await res.json();
       
       if (res.ok) {
         setIssueMsg('✅ Issue reported successfully!');
         setIssueData({ title: '', description: '', category: 'Electrical', location: '' });
+        setImageFile(null);
+        // Reset the file input
+        document.getElementById('image-input').value = '';
         fetchIssues();
       } else {
         setIssueMsg(`❌ ${data.error}`);
       }
     } catch (err) {
-      setIssueMsg('❌ Server error');
+      setIssueMsg('❌ Server error or image upload failed');
+      console.error(err);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -170,8 +204,15 @@ function App() {
                   <option value="Other">Other</option>
                 </select>
                 <textarea name="description" placeholder="Describe the issue in detail..." value={issueData.description} onChange={(e) => setIssueData({...issueData, description: e.target.value})} required className="border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[100px]" />
-                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors">
-                  Submit Issue
+                
+                {/* Image Upload Input */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Attach a Photo (Optional)</label>
+                  <input id="image-input" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                </div>
+
+                <button type="submit" disabled={isUploading} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2.5 px-4 rounded-lg transition-colors">
+                  {isUploading ? 'Uploading...' : 'Submit Issue'}
                 </button>
               </form>
               {issueMsg && <p className={`mt-3 text-sm font-medium ${issueMsg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>{issueMsg}</p>}
@@ -205,6 +246,13 @@ function App() {
                     </div>
                     <p className="text-slate-600 text-sm mb-4 mt-2">{issue.description}</p>
                     
+                    {/* Display Image if it exists */}
+                    {issue.image_url && (
+                      <div className="mb-4">
+                        <img src={issue.image_url} alt="Issue attachment" className="rounded-lg max-h-64 object-cover border border-slate-200" />
+                      </div>
+                    )}
+
                     {user.role === 'admin' && (
                       <div className="flex justify-end border-t border-slate-100 pt-3 mt-3">
                         <button onClick={() => handleResolve(issue.id, issue.status)} className="bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium py-1.5 px-4 rounded-lg transition-colors">
