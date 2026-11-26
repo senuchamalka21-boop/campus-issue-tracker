@@ -15,6 +15,9 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [issueMsg, setIssueMsg] = useState('');
   const [issues, setIssues] = useState([]);
+  
+  // State for editing an issue
+  const [editingIssue, setEditingIssue] = useState(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -84,6 +87,7 @@ function App() {
     setMessage('');
     setIssueMsg('');
     setIssues([]);
+    setEditingIssue(null);
   };
 
   const handleIssueSubmit = async (e) => {
@@ -91,7 +95,7 @@ function App() {
     setIssueMsg('Submitting...');
     setIsUploading(true);
     
-    let imageUrl = null;
+    let imageUrl = editingIssue ? editingIssue.image_url : null;
 
     try {
       if (imageFile) {
@@ -113,8 +117,11 @@ function App() {
       }
 
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/issues`, {
-        method: 'POST',
+      const url = editingIssue ? `${API_URL}/api/issues/${editingIssue.id}` : `${API_URL}/api/issues`;
+      const method = editingIssue ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -125,9 +132,10 @@ function App() {
       const data = await res.json();
       
       if (res.ok) {
-        setIssueMsg('✅ Issue reported successfully!');
+        setIssueMsg(`✅ Issue ${editingIssue ? 'updated' : 'reported'} successfully!`);
         setIssueData({ title: '', description: '', category: 'Electrical', location: '' });
         setImageFile(null);
+        setEditingIssue(null);
         document.getElementById('image-input').value = '';
         fetchIssues();
       } else {
@@ -162,6 +170,34 @@ function App() {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this issue?")) return;
+
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/api/issues/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchIssues();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const startEdit = (issue) => {
+    setEditingIssue(issue);
+    setIssueData({
+      title: issue.title,
+      description: issue.description,
+      category: issue.category,
+      location: issue.location
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // --- DASHBOARD VIEW ---
   if (user) {
     return (
@@ -183,9 +219,17 @@ function App() {
         </nav>
 
         <main className="max-w-4xl mx-auto px-4 py-8">
-          {user.role === 'student' && (
+          {/* FORM (Shows for Students OR when editing an issue) */}
+          {(user.role === 'student' || editingIssue) && (
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8 transition-shadow duration-300 hover:shadow-md animate-slide-up">
-              <h2 className="text-lg font-bold mb-4">Report a New Issue</h2>
+              <h2 className="text-lg font-bold mb-4">{editingIssue ? 'Edit Issue' : 'Report a New Issue'}</h2>
+              
+              {editingIssue && (
+                <button onClick={() => { setEditingIssue(null); setIssueData({ title: '', description: '', category: 'Electrical', location: '' }); }} className="mb-4 text-sm text-blue-600 hover:underline">
+                  Cancel Editing
+                </button>
+              )}
+
               <form onSubmit={handleIssueSubmit} className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input name="title" placeholder="Issue Title" value={issueData.title} onChange={(e) => setIssueData({...issueData, title: e.target.value})} required className="border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200" />
@@ -206,7 +250,7 @@ function App() {
                 </div>
 
                 <button type="submit" disabled={isUploading} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-95">
-                  {isUploading ? 'Uploading...' : 'Submit Issue'}
+                  {isUploading ? 'Uploading...' : editingIssue ? 'Save Changes' : 'Submit Issue'}
                 </button>
               </form>
               {issueMsg && <p className={`mt-3 text-sm font-medium animate-slide-up ${issueMsg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>{issueMsg}</p>}
@@ -245,13 +289,27 @@ function App() {
                       </div>
                     )}
 
-                    {user.role === 'admin' && (
-                      <div className="flex justify-end border-t border-slate-100 pt-3 mt-3">
+                    {/* ACTIONS */}
+                    <div className="flex justify-between items-center border-t border-slate-100 pt-3 mt-3">
+                      <div className="flex gap-2">
+                        {issue.status !== 'resolved' && (
+                          <button onClick={() => startEdit(issue)} className="text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-all duration-200 active:scale-95">
+                            Edit
+                          </button>
+                        )}
+                        {(user.role === 'admin' || issue.status === 'resolved') && (
+                          <button onClick={() => handleDelete(issue.id)} className="text-sm font-medium text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-all duration-200 active:scale-95">
+                            Delete
+                          </button>
+                        )}
+                      </div>
+
+                      {user.role === 'admin' && (
                         <button onClick={() => handleResolve(issue.id, issue.status)} className="bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium py-1.5 px-4 rounded-lg transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 active:scale-95">
                           Mark as {issue.status === 'open' ? 'In Progress' : issue.status === 'in_progress' ? 'Resolved' : 'Open'}
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -157,4 +157,55 @@ app.patch('/api/issues/:id/status', verifyToken, async (req, res) => {
   }
 });
 
+// --- DELETE ISSUE ---
+app.delete('/api/issues/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    let query = 'DELETE FROM issues WHERE id = $1';
+    let values = [id];
+    
+    if (req.user.role !== 'admin') {
+      query = 'DELETE FROM issues WHERE id = $1 AND student_id = $2';
+      values = [id, req.user.id];
+    }
+
+    const result = await pool.query(query + ' RETURNING *', values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Issue not found or unauthorized' });
+    }
+    
+    res.json({ message: 'Issue deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- EDIT ISSUE ---
+app.put('/api/issues/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, category, location } = req.body;
+    
+    let query = 'UPDATE issues SET title = $1, description = $2, category = $3, location = $4 WHERE id = $5';
+    let values = [title, description, category, location, id];
+    
+    if (req.user.role !== 'admin') {
+      query = 'UPDATE issues SET title = $1, description = $2, category = $3, location = $4 WHERE id = $5 AND student_id = $6';
+      values = [title, description, category, location, id, req.user.id];
+    }
+
+    const result = await pool.query(query + ' RETURNING *', values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Issue not found or unauthorized' });
+    }
+    
+    res.json({ message: 'Issue updated successfully', issue: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = app;
