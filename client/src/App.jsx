@@ -18,9 +18,14 @@ function App() {
   const [editingIssue, setEditingIssue] = useState(null);
 
   // UI States
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'report', 'users'
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'open', 'in_progress', 'resolved'
+  const [activeTab, setActiveTab] = useState('dashboard'); 
+  const [filterStatus, setFilterStatus] = useState('all'); 
   const [usersList, setUsersList] = useState([]);
+  
+  // New States: Dark Mode, Search, and Sort
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest');
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -127,7 +132,7 @@ function App() {
         setIssueData({ title: '', description: '', category: 'Electrical', location: '' });
         setImageFile(null);
         setEditingIssue(null);
-        setActiveTab('dashboard'); // Go back to dashboard after submit
+        setActiveTab('dashboard');
         fetchIssues();
       } else {
         const data = await res.json();
@@ -177,40 +182,62 @@ function App() {
 
   // --- MAIN DASHBOARD LAYOUT ---
   if (user) {
-    // Filter issues based on the stat card clicked
-    const filteredIssues = issues.filter(issue => filterStatus === 'all' ? true : issue.status === filterStatus);
+    // Apply Search, Filter, and Sort
+    let processedIssues = issues.filter(issue => filterStatus === 'all' ? true : issue.status === filterStatus);
+    
+    if (searchQuery) {
+      processedIssues = processedIssues.filter(i => 
+        i.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        i.location.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    processedIssues.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+
+    const themeClass = isDarkMode ? 'dark' : '';
 
     return (
-      <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col md:flex-row">
+      <div className={`min-h-screen font-sans flex flex-col md:flex-row transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-100 text-slate-800'}`}>
         
         {/* SIDEBAR NAVIGATION */}
-        <aside className="w-full md:w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-10">
-          <div className="p-6 flex items-center gap-3 border-b border-slate-800">
-            <span className="text-2xl">🏫</span>
-            <h1 className="text-xl font-bold text-white tracking-wide">CampusTracker</h1>
+        <aside className={`w-full md:w-64 flex flex-col shadow-xl z-10 transition-colors duration-300 ${isDarkMode ? 'bg-slate-950 border-r border-slate-800' : 'bg-slate-900 text-slate-300'}`}>
+          <div className={`p-6 flex items-center justify-between border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-800'}`}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🏫</span>
+              <h1 className="text-xl font-bold text-white tracking-wide">CampusTracker</h1>
+            </div>
           </div>
           
           <div className="p-4 flex-1 flex flex-col gap-2">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4 px-2">Main Menu</p>
-            <button onClick={() => { setActiveTab('dashboard'); setFilterStatus('all'); }} className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'}`}>
+            <button onClick={() => { setActiveTab('dashboard'); setFilterStatus('all'); }} className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : isDarkMode ? 'hover:bg-slate-800 hover:text-white' : 'hover:bg-slate-800 hover:text-white'}`}>
               <span>📊</span> Dashboard
             </button>
 
-            {/* Only students see the Report button in the menu */}
             {user.role === 'student' && (
-              <button onClick={() => { setActiveTab('report'); setEditingIssue(null); setIssueData({ title: '', description: '', category: 'Electrical', location: '' }); }} className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === 'report' ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'}`}>
+              <button onClick={() => { setActiveTab('report'); setEditingIssue(null); setIssueData({ title: '', description: '', category: 'Electrical', location: '' }); }} className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === 'report' ? 'bg-blue-600 text-white shadow-md' : isDarkMode ? 'hover:bg-slate-800 hover:text-white' : 'hover:bg-slate-800 hover:text-white'}`}>
                 <span>➕</span> Report Issue
               </button>
             )}
 
             {user.role === 'admin' && (
-              <button onClick={() => setActiveTab('users')} className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === 'users' ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white'}`}>
+              <button onClick={() => setActiveTab('users')} className={`flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${activeTab === 'users' ? 'bg-blue-600 text-white shadow-md' : isDarkMode ? 'hover:bg-slate-800 hover:text-white' : 'hover:bg-slate-800 hover:text-white'}`}>
                 <span>👥</span> Manage Users
               </button>
             )}
+
+            <div className="mt-auto pt-6">
+              <button onClick={() => setIsDarkMode(!isDarkMode)} className={`flex items-center justify-between w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${isDarkMode ? 'bg-slate-800 text-yellow-400' : 'bg-slate-800 text-slate-300 hover:text-white'}`}>
+                <span className="flex items-center gap-3">{isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}</span>
+              </button>
+            </div>
           </div>
 
-          <div className="p-4 border-t border-slate-800">
+          <div className={`p-4 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-800'}`}>
             <div className="flex items-center gap-3 mb-4 px-2">
               <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
                 {user.name.charAt(0)}
@@ -229,71 +256,84 @@ function App() {
         {/* MAIN CONTENT AREA */}
         <main className="flex-1 p-4 md:p-8 overflow-y-auto h-screen">
           
-          {/* TAB: DASHBOARD (ISSUES LIST + STATS) */}
           {activeTab === 'dashboard' && (
             <div className="max-w-5xl mx-auto animate-slide-up">
               
-              <div className="flex justify-between items-end mb-8">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
                 <div>
-                  <h2 className="text-3xl font-bold text-slate-800">Welcome back, {user.name.split(' ')[0]} 👋</h2>
-                  <p className="text-slate-500 mt-1">Here is what's happening on campus today.</p>
+                  <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Welcome back, {user.name.split(' ')[0]} 👋</h2>
+                  <p className={`mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Here is what's happening on campus today.</p>
                 </div>
-                {user.role === 'student' && (
-                  <button onClick={() => setActiveTab('report')} className="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm items-center gap-2">
-                    <span>➕</span> New Issue
-                  </button>
-                )}
+                
+                {/* Search and Sort Controls */}
+                <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                  <input 
+                    type="text" 
+                    placeholder="🔍 Search issues..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={`px-4 py-2 rounded-lg border outline-none transition-all w-full md:w-64 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:border-blue-500' : 'bg-white border-slate-300 focus:border-blue-500'}`}
+                  />
+                  <select 
+                    value={sortOrder} 
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    className={`px-4 py-2 rounded-lg border outline-none transition-all cursor-pointer ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:border-blue-500' : 'bg-white border-slate-300 focus:border-blue-500'}`}
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                  </select>
+                </div>
               </div>
 
-              {/* STATS CARDS (Clickable Filters) */}
+              {/* STATS CARDS */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <button onClick={() => setFilterStatus('all')} className={`p-5 rounded-xl border-2 text-left transition-all duration-200 ${filterStatus === 'all' ? 'border-blue-500 bg-blue-50' : 'border-transparent bg-white shadow-sm hover:border-slate-300'}`}>
-                  <p className="text-sm font-medium text-slate-500 mb-1">Total Issues</p>
-                  <p className="text-3xl font-bold text-slate-800">{issues.length}</p>
+                <button onClick={() => setFilterStatus('all')} className={`p-5 rounded-xl border-2 text-left transition-all duration-200 ${filterStatus === 'all' ? 'border-blue-500 ' + (isDarkMode ? 'bg-blue-900/30' : 'bg-blue-50') : isDarkMode ? 'border-slate-700 bg-slate-800 hover:border-slate-500' : 'border-transparent bg-white shadow-sm hover:border-slate-300'}`}>
+                  <p className={`text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Total Issues</p>
+                  <p className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{issues.length}</p>
                 </button>
-                <button onClick={() => setFilterStatus('open')} className={`p-5 rounded-xl border-2 text-left transition-all duration-200 ${filterStatus === 'open' ? 'border-blue-500 bg-blue-50' : 'border-transparent bg-white shadow-sm hover:border-slate-300'}`}>
-                  <p className="text-sm font-medium text-slate-500 mb-1">Open</p>
-                  <p className="text-3xl font-bold text-blue-600">{issues.filter(i => i.status === 'open').length}</p>
+                <button onClick={() => setFilterStatus('open')} className={`p-5 rounded-xl border-2 text-left transition-all duration-200 ${filterStatus === 'open' ? 'border-blue-500 ' + (isDarkMode ? 'bg-blue-900/30' : 'bg-blue-50') : isDarkMode ? 'border-slate-700 bg-slate-800 hover:border-slate-500' : 'border-transparent bg-white shadow-sm hover:border-slate-300'}`}>
+                  <p className={`text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Open</p>
+                  <p className="text-3xl font-bold text-blue-500">{issues.filter(i => i.status === 'open').length}</p>
                 </button>
-                <button onClick={() => setFilterStatus('in_progress')} className={`p-5 rounded-xl border-2 text-left transition-all duration-200 ${filterStatus === 'in_progress' ? 'border-amber-500 bg-amber-50' : 'border-transparent bg-white shadow-sm hover:border-slate-300'}`}>
-                  <p className="text-sm font-medium text-slate-500 mb-1">In Progress</p>
+                <button onClick={() => setFilterStatus('in_progress')} className={`p-5 rounded-xl border-2 text-left transition-all duration-200 ${filterStatus === 'in_progress' ? 'border-amber-500 ' + (isDarkMode ? 'bg-amber-900/30' : 'bg-amber-50') : isDarkMode ? 'border-slate-700 bg-slate-800 hover:border-slate-500' : 'border-transparent bg-white shadow-sm hover:border-slate-300'}`}>
+                  <p className={`text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>In Progress</p>
                   <p className="text-3xl font-bold text-amber-500">{issues.filter(i => i.status === 'in_progress').length}</p>
                 </button>
-                <button onClick={() => setFilterStatus('resolved')} className={`p-5 rounded-xl border-2 text-left transition-all duration-200 ${filterStatus === 'resolved' ? 'border-green-500 bg-green-50' : 'border-transparent bg-white shadow-sm hover:border-slate-300'}`}>
-                  <p className="text-sm font-medium text-slate-500 mb-1">Resolved</p>
+                <button onClick={() => setFilterStatus('resolved')} className={`p-5 rounded-xl border-2 text-left transition-all duration-200 ${filterStatus === 'resolved' ? 'border-green-500 ' + (isDarkMode ? 'bg-green-900/30' : 'bg-green-50') : isDarkMode ? 'border-slate-700 bg-slate-800 hover:border-slate-500' : 'border-transparent bg-white shadow-sm hover:border-slate-300'}`}>
+                  <p className={`text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Resolved</p>
                   <p className="text-3xl font-bold text-green-500">{issues.filter(i => i.status === 'resolved').length}</p>
                 </button>
               </div>
 
               {/* ISSUES LIST */}
-              <h3 className="text-xl font-bold mb-4">
+              <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
                 {filterStatus === 'all' ? 'All Issues' : filterStatus === 'open' ? 'Open Issues' : filterStatus === 'in_progress' ? 'Issues in Progress' : 'Resolved Issues'}
               </h3>
               
-              {filteredIssues.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-xl border border-slate-200 border-dashed">
+              {processedIssues.length === 0 ? (
+                <div className={`text-center py-20 rounded-xl border border-dashed ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
                   <p className="text-4xl mb-3">✨</p>
-                  <p className="text-slate-500 font-medium text-lg">No issues found here.</p>
+                  <p className={`font-medium text-lg ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>No issues found here.</p>
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {filteredIssues.map(issue => (
-                    <div key={issue.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 transition-all duration-300 hover:shadow-md hover:border-slate-300 group">
+                  {processedIssues.map(issue => (
+                    <div key={issue.id} className={`p-6 rounded-xl shadow-sm border transition-all duration-300 group ${isDarkMode ? 'bg-slate-800 border-slate-700 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h4 className="font-bold text-lg text-slate-800 group-hover:text-blue-600 transition-colors">{issue.title}</h4>
+                            <h4 className={`font-bold text-lg transition-colors ${isDarkMode ? 'text-white group-hover:text-blue-400' : 'text-slate-800 group-hover:text-blue-600'}`}>{issue.title}</h4>
                             <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider
                               ${issue.status === 'resolved' ? 'bg-green-100 text-green-700' : issue.status === 'in_progress' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
                               {issue.status.replace('_', ' ')}
                             </span>
                           </div>
-                          <p className="text-sm text-slate-500 mb-3 flex items-center gap-4">
+                          <p className={`text-sm mb-3 flex items-center gap-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                             {issue.student_name && <span className="flex items-center gap-1">👤 {issue.student_name}</span>}
                             <span className="flex items-center gap-1">📍 {issue.location}</span>
                             <span className="flex items-center gap-1">🏷️ {issue.category}</span>
                           </p>
-                          <p className="text-slate-600 text-sm">{issue.description}</p>
+                          <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{issue.description}</p>
                           
                           {issue.image_url && (
                             <div className="mt-4">
@@ -311,10 +351,10 @@ function App() {
                           )}
                           <div className="flex gap-2 justify-end">
                             {issue.status !== 'resolved' && (
-                              <button onClick={() => startEdit(issue)} className="text-xs font-medium text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all">Edit</button>
+                              <button onClick={() => startEdit(issue)} className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${isDarkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600'}`}>Edit</button>
                             )}
                             {(user.role === 'admin' || issue.status === 'resolved') && (
-                              <button onClick={() => handleDeleteIssue(issue.id)} className="text-xs font-medium text-slate-600 hover:text-red-600 bg-slate-100 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all">Delete</button>
+                              <button onClick={() => handleDeleteIssue(issue.id)} className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${isDarkMode ? 'bg-slate-700 text-slate-300 hover:bg-red-900 hover:text-red-400' : 'bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600'}`}>Delete</button>
                             )}
                           </div>
                         </div>
@@ -328,22 +368,22 @@ function App() {
 
           {/* TAB: REPORT ISSUE FORM */}
           {activeTab === 'report' && (user.role === 'student' || editingIssue) && (
-            <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200 animate-slide-up">
-              <div className="mb-6 border-b border-slate-100 pb-4">
-                <h2 className="text-2xl font-bold">{editingIssue ? 'Edit Issue Details' : 'Report a New Issue'}</h2>
-                <p className="text-slate-500 text-sm mt-1">Please provide as much detail as possible.</p>
+            <div className={`max-w-2xl mx-auto p-8 rounded-2xl shadow-sm border animate-slide-up ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+              <div className={`mb-6 border-b pb-4 ${isDarkMode ? 'border-slate-700' : 'border-slate-100'}`}>
+                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{editingIssue ? 'Edit Issue Details' : 'Report a New Issue'}</h2>
+                <p className={`text-sm mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Please provide as much detail as possible.</p>
               </div>
 
               <form onSubmit={handleIssueSubmit} className="flex flex-col gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Issue Title</label>
-                  <input type="text" name="title" placeholder="E.g., Broken fan in Room 12" value={issueData.title} onChange={(e) => setIssueData({...issueData, title: e.target.value})} required className="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Issue Title</label>
+                  <input type="text" name="title" placeholder="E.g., Broken fan in Room 12" value={issueData.title} onChange={(e) => setIssueData({...issueData, title: e.target.value})} required className={`w-full border rounded-lg p-3 outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-slate-600 text-white focus:border-blue-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500'}`} />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-                    <select name="category" value={issueData.category} onChange={(e) => setIssueData({...issueData, category: e.target.value})} className="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white">
+                    <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Category</label>
+                    <select name="category" value={issueData.category} onChange={(e) => setIssueData({...issueData, category: e.target.value})} className={`w-full border rounded-lg p-3 outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-slate-600 text-white focus:border-blue-500' : 'bg-white border-slate-300 focus:ring-2 focus:ring-blue-500'}`}>
                       <option value="Electrical">Electrical</option>
                       <option value="Plumbing">Plumbing</option>
                       <option value="Wi-Fi">Wi-Fi / Network</option>
@@ -352,27 +392,27 @@ function App() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                    <input type="text" name="location" placeholder="E.g., Hostel Room 12" value={issueData.location} onChange={(e) => setIssueData({...issueData, location: e.target.value})} required className="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+                    <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Location</label>
+                    <input type="text" name="location" placeholder="E.g., Hostel Room 12" value={issueData.location} onChange={(e) => setIssueData({...issueData, location: e.target.value})} required className={`w-full border rounded-lg p-3 outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-slate-600 text-white focus:border-blue-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500'}`} />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                  <textarea name="description" placeholder="Describe the issue in detail..." value={issueData.description} onChange={(e) => setIssueData({...issueData, description: e.target.value})} required className="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all min-h-[120px] resize-y" />
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Description</label>
+                  <textarea name="description" placeholder="Describe the issue in detail..." value={issueData.description} onChange={(e) => setIssueData({...issueData, description: e.target.value})} required className={`w-full border rounded-lg p-3 outline-none transition-all min-h-[120px] resize-y ${isDarkMode ? 'bg-slate-900 border-slate-600 text-white focus:border-blue-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500'}`} />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Attach Photo (Optional)</label>
-                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
+                  <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Attach Photo (Optional)</label>
+                  <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer relative ${isDarkMode ? 'border-slate-600 hover:bg-slate-700/50' : 'border-slate-300 hover:bg-slate-50'}`}>
                     <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                    <p className="text-slate-500 text-sm"><span className="text-blue-600 font-medium">Click to upload</span> or drag and drop</p>
-                    <p className="text-xs text-slate-400 mt-1">{imageFile ? imageFile.name : 'PNG, JPG up to 5MB'}</p>
+                    <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}><span className="text-blue-500 font-medium">Click to upload</span> or drag and drop</p>
+                    <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{imageFile ? imageFile.name : 'PNG, JPG up to 5MB'}</p>
                   </div>
                 </div>
 
                 <div className="flex gap-3 mt-4">
-                  <button type="button" onClick={() => setActiveTab('dashboard')} className="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-3 rounded-lg transition-all">Cancel</button>
+                  <button type="button" onClick={() => setActiveTab('dashboard')} className={`w-1/3 font-medium py-3 rounded-lg transition-all ${isDarkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Cancel</button>
                   <button type="submit" disabled={isUploading} className="w-2/3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 rounded-lg transition-all shadow-md hover:shadow-lg">
                     {isUploading ? 'Uploading...' : editingIssue ? 'Save Changes' : 'Submit Issue'}
                   </button>
@@ -386,14 +426,14 @@ function App() {
           {activeTab === 'users' && user.role === 'admin' && (
             <div className="max-w-5xl mx-auto animate-slide-up">
                <div className="mb-8">
-                <h2 className="text-3xl font-bold text-slate-800">User Management</h2>
-                <p className="text-slate-500 mt-1">Manage student accounts, promote to admin, or delete accounts.</p>
+                <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>User Management</h2>
+                <p className={`mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Manage student accounts, promote to admin, or delete accounts.</p>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className={`rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-sm">
+                    <tr className={`border-b text-sm ${isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
                       <th className="p-5 font-medium">User</th>
                       <th className="p-5 font-medium">Role</th>
                       <th className="p-5 font-medium">Joined</th>
@@ -402,22 +442,22 @@ function App() {
                   </thead>
                   <tbody>
                     {usersList.map((u) => (
-                      <tr key={u.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                      <tr key={u.id} className={`border-b last:border-0 transition-colors ${isDarkMode ? 'border-slate-700 hover:bg-slate-700/50' : 'border-slate-100 hover:bg-slate-50'}`}>
                         <td className="p-5">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs">{u.name.charAt(0)}</div>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isDarkMode ? 'bg-slate-600 text-slate-200' : 'bg-slate-200 text-slate-600'}`}>{u.name.charAt(0)}</div>
                             <div>
-                              <p className="font-medium text-slate-800">{u.name} {u.id === user.id && <span className="text-xs text-blue-500 font-normal">(You)</span>}</p>
-                              <p className="text-xs text-slate-500">{u.email}</p>
+                              <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{u.name} {u.id === user.id && <span className="text-xs text-blue-500 font-normal">(You)</span>}</p>
+                              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{u.email}</p>
                             </div>
                           </div>
                         </td>
                         <td className="p-5">
-                          <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wider ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'}`}>
+                          <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wider ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : isDarkMode ? 'bg-slate-600 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
                             {u.role}
                           </span>
                         </td>
-                        <td className="p-5 text-sm text-slate-500">
+                        <td className={`p-5 text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                           {new Date(u.created_at).toLocaleDateString()}
                         </td>
                         <td className="p-5 text-right">
@@ -450,9 +490,8 @@ function App() {
   // --- LOGIN/REGISTER VIEW ---
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center font-sans px-4 relative overflow-hidden">
-      {/* Decorative background shapes */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-      <div className="absolute top-[20%] right-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+      <div className="absolute top-[20%] right-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
       
       <div className="bg-white/10 backdrop-blur-xl p-10 rounded-3xl shadow-2xl w-full max-w-md border border-white/20 animate-slide-up relative z-10">
         <div className="text-center mb-10">
